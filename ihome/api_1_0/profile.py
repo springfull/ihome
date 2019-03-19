@@ -3,7 +3,7 @@ from . import api
 from flask import request, current_app, jsonify,g
 from ihome.utils.response_code import RET
 from ihome.utils.commons import login_required
-
+# 123
 
 @api.route('/users/avatar', methods=['POST'])
 @login_required
