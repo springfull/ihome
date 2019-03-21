@@ -33,12 +33,39 @@ class User(BaseModel, db.Model):
     def check_password(self, passwd):
         return check_password_hash(self.password_hash, passwd)
 
+    def to_dict(self):
+        """将对象转换为字典数据"""
+        user_dict = {
+            'user_id': self.id,
+            'name': self.name,
+            "mobile": self.mobile,
+            "avatar": constants.QINIU_URL_DOMAIN + self.avatar_url if self.avatar_url else "",
+            "create_time": self.create_time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        return user_dict
+
+    def auth_to_dict(self):
+        auth_dict = {
+            "user_id": self.id,
+            "real_name": self.real_name,
+            "id_card": self.id_card
+        }
+        return auth_dict
+
 
 class Area(BaseModel, db.Model):
     __tablename__ = 'ih_area_info'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), nullable=False)
     houses = db.relationship('House', backref='area')
+
+    def to_dict(self):
+        """将对象转换为字典"""
+        d = {
+            "aid": self.id,
+            "aname": self.name
+        }
+        return d
 
 
 # 房屋设施表，建立房屋与设施的多对多关系
@@ -73,6 +100,61 @@ class House(BaseModel, db.Model):
     facilities = db.relationship("Facility", secondary=house_facility)  # 房屋的设施
     images = db.relationship("HouseImage")  # 房屋的图片
     orders = db.relationship("Order", backref="house")  # 房屋的订单
+
+    def to_basic_dict(self):
+        house_dict = {
+            "house_id": self.id,
+            "title": self.title,
+            "price": self.price,
+            "area_name": self.area.name,
+            "img_url": constants.QINIU_URL_DOMAIN + self.index_image_url if self.index_image_url else "",
+            "room_count": self.room_count,
+            "order_count": self.order_count,
+            "address": self.address,
+            "user_avatar": constants.QINIU_URL_DOMAIN + self.user.avatar_url if self.user.avatar_url else "",
+            "ctime": self.create_time.strftime("%Y-%m-%d")
+        }
+        return house_dict
+
+    def to_full_dict(self):
+        house_dict = {
+            "hid": self.id,
+            "user_id": self.user_id,
+            "user_name": self.user.name,
+            "user_avatar": constants.QINIU_URL_DOMAIN + self.user.avatar_url if self.user.avatar_url else "",
+            "title": self.title,
+            "price": self.price,
+            "address": self.address,
+            "room_count": self.room_count,
+            "acreage": self.acreage,
+            "unit": self.unit,
+            "capacity": self.capacity,
+            "beds": self.beds,
+            "deposit": self.deposit,
+            "min_days": self.min_days,
+            "max_days": self.max_days,
+        }
+        img_urls = []
+        for image in self.images:
+            img_urls.append(constants.QINIU_URL_DOMAIN + image.url)
+        house_dict['img_urls'] = img_urls
+
+        facilities = []
+        for facility in self.facilities:
+            facilities.append(facility.id)
+        house_dict['facilities'] = facilities
+
+        comments = []
+        orders = Order.query.filter(Order.id == self.id, Order.status == 'COMPLETE', Order.comment != None) \
+            .order_by(Order.update_time.desc()).limit(constants.HOUSE_DETAIL_COMMENT_DISPLAY_COUNTS)
+        for order in orders:
+            comment = {
+                "comment": order.comment,  # 评论的内容
+                "user_name": order.user.name if order.user.name != order.user.mobile else "匿名用户",  # 发表评论的用户
+                "ctime": order.update_time.strftime("%Y-%m-%d %H:%M:%S")  # 评价的时间
+            }
+            comments.append(comment)
+        return house_dict
 
 
 class Facility(BaseModel, db.Model):
@@ -114,3 +196,19 @@ class Order(BaseModel, db.Model):
         default='WAIT_ACCEPT', index=True)
     comment = db.Column(db.Text)
     trade_no = db.Column(db.String(80))  # 交易的流水号 支付宝的
+
+    def to_dict(self):
+        """将订单信息转换为字典数据"""
+        order_dict = {
+            "order_id": self.id,
+            "title": self.house.title,
+            "img_url": constants.QINIU_URL_DOMAIN + self.house.index_image_url if self.house.index_image_url else "",
+            "start_date": self.begin_date.strftime("%Y-%m-%d"),
+            "end_date": self.end_date.strftime("%Y-%m-%d"),
+            "ctime": self.create_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "days": self.days,
+            "amount": self.amount,
+            "status": self.status,
+            "comment": self.comment if self.comment else ""
+        }
+        return order_dict

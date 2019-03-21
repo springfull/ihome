@@ -6,7 +6,7 @@ class Config(object):
     # mysql数据库
     SQLALCHEMY_DATABASE_URI = 'mysql://myuser:123456@127.0.0.1:3306/ihome_01'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
-    SQLALCHEMY_ECHO = True
+    # SQLALCHEMY_ECHO = True
     # redis数据库
 
     REDIS_HOST = '127.0.0.1'
